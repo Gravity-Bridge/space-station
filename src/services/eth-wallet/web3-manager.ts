@@ -20,6 +20,10 @@ export default class Web3Manager {
     return this.web3.eth.getBalance(address);
   }
 
+  async getGasPrice (): Promise<string> {
+    return this.web3.eth.getGasPrice();
+  }
+
   async sendToCosmos (contractAddress: string, fromAddress: string, erc20Address: string, gravityBridgeAddress: string, amount: string): Promise<Contract> {
     const contract = await this.getContract(gravityBridgeAbi as AbiItem[], contractAddress);
     const method = (contract.methods as GravityBridgetContractMethods).sendToCosmos(erc20Address, gravityBridgeAddress, amount);

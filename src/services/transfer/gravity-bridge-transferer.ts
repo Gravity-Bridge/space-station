@@ -168,12 +168,13 @@ function isSendCosmosResponse (response: unknown): response is SendToCosmosRespo
 
 async function getGasPrices (): Promise<{ slow: number; fast: number; instant: number }> {
   try {
-    const response = await axios.get(`https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${process.env.REACT_APP_ETHERSCAN_API_KEY}`);
-    const { suggestBaseFee, SafeGasPrice, FastGasPrice } = response.data.result;
+    const gasPriceWei = await ethWalletManger.getGasPrice(SupportedEthChain.Eth);
+    const gasPriceGwei = parseFloat(new Big(gasPriceWei).div(1e9).toString());
+    // Use current gas price as "fast", with slow at 90% and instant at 110%
     return {
-      slow: suggestBaseFee,
-      fast: SafeGasPrice,
-      instant: FastGasPrice
+      slow: parseFloat((gasPriceGwei * 0.9).toFixed(2)),
+      fast: gasPriceGwei,
+      instant: parseFloat((gasPriceGwei * 1.1).toFixed(2))
     };
   } catch (error) {
     throw new Error('Error fetching gas prices:');

@@ -198,6 +198,24 @@ async function getERC20Balance (chain: SupportedEthChain, contractAddress: strin
   }
 }
 
+async function getGasPrice (chain: SupportedEthChain): Promise<string> {
+  try {
+    logger.info('[getGasPrice] Getting gas price...');
+    const wallet = getWalletByChain(chain);
+    if (wallet) {
+      await wallet.updateNetwork(chain);
+      const web3 = await wallet.getWeb3();
+      if (web3 !== null) {
+        return web3.getGasPrice();
+      }
+    }
+    return '0';
+  } catch (error) {
+    logger.error(error);
+    return '0';
+  }
+}
+
 async function getWeb3 (chain: SupportedEthChain): Promise<Web3Manager | null> {
   const wallet = getWalletByChain(chain);
   if (wallet !== undefined) {
@@ -240,6 +258,7 @@ const manager: IEthWalletManager = {
   updateAccount,
   getERC20Info,
   getERC20Balance,
+  getGasPrice,
   getWeb3
 };
 

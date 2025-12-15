@@ -5,7 +5,7 @@ import _ from 'lodash';
 const gravityBridge: CosmosChainInfo = {
   chainName: 'Gravity Bridge',
   chainId: 'gravity-bridge-3',
-  lcd: 'https://gravity.api.chandrastation.com',
+  lcd: 'https://gravitychain.io:1317',
   bech32Prefix: 'gravity',
   path: [44, 118, 0, 0, 0],
   denom: 'ugraviton',

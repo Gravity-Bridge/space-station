@@ -1,7 +1,6 @@
 {
   "name": "gravity-bridge-dapp",
   "version": "0.0.1",
-  "homepage": "https://<your_github_username>.github.io/space-station/",
   "private": true,
   "dependencies": {
     "@cosmjs/launchpad": "^0.26.5",
@@ -54,12 +53,10 @@
   "scripts": {
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "start": "set REACT_APP_GA=G-VEG6QT20YL && set NODE_OPTIONS=--openssl-legacy-provider && react-scripts start",
-    "build": "REACT_APP_GA=G-VEG6QT20YL react-scripts build",
+    "start": "NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
+    "build": "react-scripts build",
     "test": "react-scripts test --passWithNoTests",
-    "eject": "react-scripts eject",
-    "deploy:testnet": "yarn run build && aws s3 sync --cache-control max-age=0,public ./build/ s3://gb-eth",
-    "deploy:prod": "REACT_APP_GA=G-VEG6QT20YL yarn run build && aws s3 sync --cache-control max-age=0,public ./build/ s3://spacestation.zone && aws cloudfront create-invalidation --distribution-id ESRVODSMBBH8C --paths '/*'"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [

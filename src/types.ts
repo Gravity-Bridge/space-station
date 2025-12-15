@@ -111,6 +111,7 @@ export interface IEthWalletManager {
   getERC20Info (chain: SupportedEthChain, contractAddress: string): Promise<IERC20Token | null>;
   updateAccount (chain: SupportedEthChain): Promise<void>;
   getERC20Balance (chain: SupportedEthChain, contractAddress: string, ownerAddress: string): Promise<string>;
+  getGasPrice (chain: SupportedEthChain): Promise<string>;
   getWeb3 (chain: SupportedEthChain): Promise<Web3Manager | null>;
 }
 
