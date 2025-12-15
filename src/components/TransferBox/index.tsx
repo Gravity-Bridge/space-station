@@ -252,7 +252,6 @@ const TransferBox: React.FC<TransferBoxProps> = ({ theme }) => {
               fromChain={fromChain}
               toChain={toChain}
               selectedToken={selectedToken}
-              currency="usd"
               balance={tokenBalance}
               amount={amount}
               select={onSelectExtraFee}

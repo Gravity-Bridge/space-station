@@ -3,68 +3,75 @@ import { IToken } from 'types';
 
 type FetchTokenPriceDataResponse = {
   price: number;
-};
+} | null;
 
-type SymbolToCoinIdMap = {
-  [key: string]: string;
-};
+// API response type - using snake_case to match API
+interface TokenMetadata {
+  symbol: string;
+  // eslint-disable-next-line camelcase
+  exchange_rate: number;
+}
 
-const symbolToCoinIdMap: SymbolToCoinIdMap = {
-  CANTO: 'canto',
-  EVMOS: 'evmos',
-  ATOM: 'atom',
-  STARS: 'stars',
-  CHEQ: 'cheq',
-  HUAHUA: 'huahua',
-  NYM: 'nym',
-  FUND: 'unification'
-};
-
+/**
+ * Fetches token price data from the Gravity Chain Info API.
+ * Returns null if the token price is not available.
+ *
+ * @param token - The token to fetch price data for
+ * @returns The token price data or null if not available
+ */
 export const fetchTokenPriceData = async (token: IToken): Promise<FetchTokenPriceDataResponse> => {
   let symbol: string | undefined;
 
-  if (token.cosmos) {
+  if (token.erc20) {
+    symbol = token.erc20.symbol;
+  } else if (token.cosmos) {
     symbol = token.cosmos.symbol;
   }
 
   if (!symbol) {
-    throw new Error('Token does not have a valid symbol');
+    return null;
   }
 
-  const supportedByGravityChain = ['DAI', 'USDT', 'USDC', 'WBTC', 'WETH'].includes(symbol);
-
-  if (supportedByGravityChain) {
+  try {
     const response = await axios.get('https://info.gravitychain.io:9000/erc20_metadata');
-    const data = response.data;
+    const data = response.data as TokenMetadata[];
 
-    let tokenData: any;
+    let tokenData: TokenMetadata | undefined;
 
     if (symbol === 'USDC') {
-      const usdcData = data.filter((item: any) => item.symbol === 'USDC');
-      tokenData = usdcData[1]; // Choose the second item in the filtered array for USDC
+      // USDC has multiple entries, choose the second one
+      const usdcData = data.filter((item) => item.symbol === 'USDC');
+      tokenData = usdcData[1];
     } else {
-      tokenData = data.find((item: any) => item.symbol === symbol);
+      tokenData = data.find((item) => item.symbol === symbol);
     }
 
     if (!tokenData) {
-      throw new Error(`Token with symbol ${symbol} not found in the response`);
+      // Token not found in Gravity Chain API
+      return null;
     }
 
-    return {
-      price: tokenData.exchange_rate / 1e6 // Convert to USD
-    };
-  } else {
-    const coinId = symbolToCoinIdMap[symbol];
+    const price = tokenData.exchange_rate / 1e6; // Convert to USD
 
-    if (!coinId) {
-      throw new Error(`Token with symbol ${symbol} not found in the symbolToCoinIdMap`);
+    // Validate the price is a valid positive number
+    if (isNaN(price) || price <= 0) {
+      return null;
     }
 
-    const response = await axios.get(`https://api-osmosis.imperator.co/tokens/v2/price/${coinId}`);
-    const data = response.data;
-
-    return {
-      price: data.price
-    };
+    return { price };
+  } catch (error) {
+    // API error - return null to allow manual price entry
+    return null;
   }
+};
+
+/**
+ * Checks if a token has price data available from the Gravity Chain API.
+ *
+ * @param token - The token to check
+ * @returns True if price data is available, false otherwise
+ */
+export const hasTokenPriceData = async (token: IToken): Promise<boolean> => {
+  const priceData = await fetchTokenPriceData(token);
+  return priceData !== null;
 };

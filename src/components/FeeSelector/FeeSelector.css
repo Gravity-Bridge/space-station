@@ -3,6 +3,10 @@
   justify-content: space-between;
 }
 
+.fee-selector-container {
+  position: relative;
+}
+
 .fee-selector-minus-fee-button {
   padding: 4px 9px;
   background: var(--blue);
@@ -98,4 +102,81 @@
 }
 @keyframes load {
   to { transform: rotate(1turn); }
+}
+
+/* Manual Price Input Styles */
+.manual-price-container {
+  width: 100%;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--base-06);
+  position: relative;
+  z-index: 10;
+}
+
+.manual-price-hint {
+  display: block;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.manual-price-input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: var(--base-06);
+  border-radius: 8px;
+  padding: 8px 12px;
+  position: relative;
+  z-index: 11;
+}
+
+.manual-price-prefix {
+  color: var(--base-02);
+  font-size: 14px;
+  margin-right: 4px;
+}
+
+.manual-price-suffix {
+  color: var(--base-02);
+  font-size: 12px;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.manual-price-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #000000;
+  font-size: 16px;
+  min-width: 0;
+  pointer-events: auto;
+  cursor: text;
+  padding: 4px 0;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.manual-price-input:focus {
+  outline: none;
+}
+
+.manual-price-input::placeholder {
+  color: var(--base-03);
+}
+
+.App.light .manual-price-input-wrapper {
+  background-color: var(--base-01);
+}
+
+.App.light .manual-price-container {
+  border-bottom-color: var(--base-01);
+}
+
+.fee-selector-message {
+  padding: 16px;
+  text-align: center;
+  width: 100%;
 }

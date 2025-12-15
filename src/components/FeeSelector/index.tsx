@@ -19,7 +19,6 @@ type FeeSelectorProps = {
   fromChain: SupportedChain,
   toChain: SupportedChain,
   selectedToken: IToken,
-  currency: string,
   balance: string,
   amount: string,
   select: (fee: BridgeFee) => void,
@@ -35,43 +34,76 @@ function getPriceDenom (selectedToken: IToken): string {
   return '';
 }
 
-const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedToken, currency, amount, balance, select, selectedFee }) => {
+const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedToken, amount, balance, select, selectedFee }) => {
   const priceDenom = getPriceDenom(selectedToken);
-  const [newTokenPrice, setTokenPrice] = useState<string>('1');
+  const [tokenPrice, setTokenPrice] = useState<string>('');
+  const [manualPrice, setManualPrice] = useState<string>('');
+  const [needsManualPrice, setNeedsManualPrice] = useState<boolean>(false);
   const [fees, setFees] = useState<BridgeFee[]>([]);
   const [priceLoading, setPriceLoading] = useState<boolean>(true);
   const [feesLoading, setFeesLoading] = useState<boolean>(true);
 
+  // Fetch token price on token change
   useEffect(() => {
-    const fetchPriceAndFees = async (): Promise<void> => {
-      try {
-        // Fetch token price
-        setPriceLoading(true);
-        const tokenPriceData = await fetchTokenPriceData(selectedToken);
-        const newTokenPrice = tokenPriceData.price.toString();
-        setTokenPrice(newTokenPrice);
-        setPriceLoading(false);
+    const fetchPrice = async (): Promise<void> => {
+      setPriceLoading(true);
+      setNeedsManualPrice(false);
+      setManualPrice('');
+      setFees([]);
 
-        // Fetch fees
-        setFeesLoading(true);
-        const fetchedFees = await transferer.getFees(fromChain, toChain, selectedToken, newTokenPrice);
-        setFees(fetchedFees);
-        setFeesLoading(false);
+      try {
+        const tokenPriceData = await fetchTokenPriceData(selectedToken);
+
+        if (tokenPriceData === null) {
+          // No price data available - need manual entry
+          setNeedsManualPrice(true);
+          setTokenPrice('');
+          setPriceLoading(false);
+          setFeesLoading(false);
+        } else {
+          setTokenPrice(tokenPriceData.price.toString());
+          setNeedsManualPrice(false);
+          setPriceLoading(false);
+          setFeesLoading(false);
+        }
       } catch (error) {
-        // eslint-disable-next-line
-        console.error('Error fetching price and fees:', error);
+        logger.error('Error fetching price:', error);
+        setNeedsManualPrice(true);
+        setPriceLoading(false);
+        setFeesLoading(false);
       }
     };
 
-    fetchPriceAndFees();
+    fetchPrice();
+  }, [selectedToken]);
 
-    // Cleanup function
-    // eslint-disable-next-line
-    return () => {
-      setPriceLoading(true);
-      setFeesLoading(true);
+  // Fetch fees when we have a price (either from API or manual entry)
+  useEffect(() => {
+    const fetchFees = async (): Promise<void> => {
+      const priceToUse = needsManualPrice ? manualPrice : tokenPrice;
+
+      if (!priceToUse || parseFloat(priceToUse) <= 0) {
+        setFees([]);
+        setFeesLoading(false);
+        return;
+      }
+
+      try {
+        setFeesLoading(true);
+        const fetchedFees = await transferer.getFees(fromChain, toChain, selectedToken, priceToUse);
+        setFees(fetchedFees);
+        setFeesLoading(false);
+      } catch (error) {
+        logger.error('Error fetching fees:', error);
+        setFees([]);
+        setFeesLoading(false);
+      }
     };
-  }, [fromChain, toChain, selectedToken]);
+
+    if (!priceLoading) {
+      fetchFees();
+    }
+  }, [fromChain, toChain, selectedToken, tokenPrice, manualPrice, needsManualPrice, priceLoading]);
 
   logger.info('denom:', priceDenom, 'Fees:', fees);
 
@@ -91,6 +123,13 @@ const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedT
     select(fee);
   }, [select]);
 
+  const onManualPriceChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (/^[0-9]*[.]?[0-9]*$/.test(value)) {
+      setManualPrice(value);
+    }
+  }, []);
+
   const disableds: boolean[] = _.map(fees, (fee) => {
     try {
       return Big(fee.amount).add(amount || '0').gt(balance);
@@ -100,8 +139,37 @@ const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedT
     }
   });
 
+  const tokenSymbol = selectedToken.erc20?.symbol || selectedToken.cosmos?.symbol || '';
+
   return (
     <Box className="fee-selector-container" density={1} depth={1}>
+      {needsManualPrice
+        ? (
+          <Row depth={1}>
+            <div className="manual-price-container">
+              <Text size="small" muted>Token Price (USD)</Text>
+              <Text size="tiny" muted className="manual-price-hint">
+                Price data unavailable for {tokenSymbol}. Please enter the current price.
+              </Text>
+              <div className="manual-price-input-wrapper">
+                <span className="manual-price-prefix">$</span>
+                <input
+                  type="text"
+                  className="manual-price-input"
+                  value={manualPrice}
+                  onChange={onManualPriceChange}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  autoCorrect="off"
+                />
+                <span className="manual-price-suffix">per {tokenSymbol}</span>
+              </div>
+            </div>
+          </Row>
+          )
+        : <></>
+      }
       <Row depth={1}>
         <div className="fee-selector-heading-container">
           <Text size="small" muted>Bridge Fee</Text>
@@ -109,31 +177,42 @@ const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedT
       </Row>
       <Row depth={1}>
         <div className="fee-selector-button-container">
-          {
-          feesLoading
-            // eslint-disable-next-line
+          {priceLoading || feesLoading
             ? (
               <div className="loader"></div>
-              ) : (
-                fees.map((fee, i) => (
-              <button
-                key={fee.id}
-                className={classNames('fee-selector-fee-button', { selected: fee.id === selectedFee?.id })}
-                onClick={onClickFee.bind(null, fee)}
-                disabled={disableds[i]}
-              >
-                <Text size="tiny" className="fee-button-text" muted={disableds[i]}>
-                  {fee.label}
+              )
+            : needsManualPrice && (!manualPrice || parseFloat(manualPrice) <= 0)
+              ? (
+                <Text size="tiny" muted className="fee-selector-message">
+                  Enter token price above to calculate fees
                 </Text>
-                <Text size="tiny" className="fee-button-text" muted={disableds[i]}>
-                  {fee.amount} {_.upperCase(fee.denom)}
-                </Text>
-                <Text size="tiny" className="fee-button-text" muted>
-                  ${fee.amountInCurrency}
-                </Text>
-              </button>
-                ))
-              )}
+                )
+              : fees.length === 0
+                ? (
+                  <Text size="tiny" muted className="fee-selector-message">
+                    Connect Ethereum wallet to calculate fees
+                  </Text>
+                  )
+                : (
+                    fees.map((fee, i) => (
+                  <button
+                    key={fee.id}
+                    className={classNames('fee-selector-fee-button', { selected: fee.id === selectedFee?.id })}
+                    onClick={onClickFee.bind(null, fee)}
+                    disabled={disableds[i]}
+                  >
+                    <Text size="tiny" className="fee-button-text" muted={disableds[i]}>
+                      {fee.label}
+                    </Text>
+                    <Text size="tiny" className="fee-button-text" muted={disableds[i]}>
+                      {fee.amount} {_.upperCase(fee.denom)}
+                    </Text>
+                    <Text size="tiny" className="fee-button-text" muted>
+                      ${fee.amountInCurrency}
+                    </Text>
+                  </button>
+                    ))
+                  )}
         </div>
       </Row>
     </Box>

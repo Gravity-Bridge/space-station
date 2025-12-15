@@ -169,7 +169,18 @@ function isSendCosmosResponse (response: unknown): response is SendToCosmosRespo
 async function getGasPrices (): Promise<{ slow: number; fast: number; instant: number }> {
   try {
     const gasPriceWei = await ethWalletManger.getGasPrice(SupportedEthChain.Eth);
+    logger.info('[getGasPrices] gasPriceWei:', gasPriceWei);
+
+    if (!gasPriceWei || gasPriceWei === '0') {
+      throw new Error('Unable to get gas price - wallet may not be connected');
+    }
+
     const gasPriceGwei = parseFloat(new Big(gasPriceWei).div(1e9).toString());
+
+    if (isNaN(gasPriceGwei) || gasPriceGwei <= 0) {
+      throw new Error('Invalid gas price received');
+    }
+
     // Use current gas price as "fast", with slow at 90% and instant at 110%
     return {
       slow: parseFloat((gasPriceGwei * 0.9).toFixed(2)),
@@ -177,89 +188,98 @@ async function getGasPrices (): Promise<{ slow: number; fast: number; instant: n
       instant: parseFloat((gasPriceGwei * 1.1).toFixed(2))
     };
   } catch (error) {
-    throw new Error('Error fetching gas prices:');
+    logger.error('[getGasPrices] Error:', error);
+    throw new Error('Error fetching gas prices: ' + (error instanceof Error ? error.message : String(error)));
   }
 }
 
 async function getWETHPrice (): Promise<{ price: number }> {
   try {
     const response = await axios.get('https://info.gravitychain.io:9000/erc20_metadata');
-    const data = response.data;
+    // eslint-disable-next-line camelcase
+    const data = response.data as Array<{ symbol: string; exchange_rate: number }>;
 
-    const tokenData = data.find((item: any) => item.symbol === 'WETH');
+    const tokenData = data.find((item) => item.symbol === 'WETH');
 
-    if (!tokenData) {
+    if (!tokenData || !tokenData.exchange_rate) {
       throw new Error('WETH not found in the response');
     }
 
-    return {
-      price: tokenData.exchange_rate / 1e6 // Convert to USD
-    };
+    const price = tokenData.exchange_rate / 1e6;
+    if (isNaN(price) || price <= 0) {
+      throw new Error('Invalid WETH price received from API');
+    }
+
+    return { price };
   } catch (error) {
-    throw new Error('Error fetching WETH price:');
+    logger.error('Error fetching WETH price:', error);
+    throw new Error('Error fetching WETH price: ' + (error instanceof Error ? error.message : String(error)));
   }
 }
 
-async function getFees (fromChain: SupportedChain, token: IToken): Promise<BridgeFee[]> {
-  if (fromChain === SupportedChain.GravityBridge) {
-    try {
-      const slowLimit = 50000;
-      const fourHrLimit = 400000;
-      const instantLimit = 750000;
-      const gasPrices = await getGasPrices();
-      const feeLevels = [gasPrices.slow, gasPrices.fast, gasPrices.instant];
-      const speedLabels: ('slow' | 'fast' | 'instant')[] = ['slow', 'fast', 'instant'];
-      const gasLimits = [slowLimit, fourHrLimit, instantLimit];
-
-      const tokenPriceData = await fetchTokenPriceData(token);
-      const tokenPrice = tokenPriceData.price;
-
-      const wethPriceData = await getWETHPrice();
-      const ethPrice = wethPriceData.price;
-
-      if (token.erc20) {
-        const erc20Token = token.erc20;
-        return feeLevels.map((gasPrice, i) => {
-          const gasLimit = gasLimits[i];
-          const usdFee = parseFloat((gasPrice * gasLimit / 1e9 * ethPrice).toFixed(4));
-          if (isNaN(usdFee) || isNaN(tokenPrice)) {
-            throw new Error('Invalid usdFee or tokenPrice');
-          }
-          const tokenFee = Big(usdFee).div(tokenPrice).round(erc20Token.decimals, Big.roundDown).toFixed(4);
-          return {
-            id: i,
-            label: getFeeLabel(speedLabels[i]),
-            denom: erc20Token.symbol,
-            amount: tokenFee,
-            amountInCurrency: usdFee.toString()
-          };
-        });
-      } else if (token.cosmos) {
-        const cosmosToken = token.cosmos;
-        return feeLevels.map((gasPrice, i) => {
-          const gasLimit = gasLimits[i];
-          const usdFee = parseFloat((gasPrice * gasLimit / 1e9 * ethPrice).toFixed(4));
-          if (isNaN(usdFee) || isNaN(tokenPrice)) {
-            throw new Error('Invalid usdFee or tokenPrice');
-          }
-          const tokenFee = Big(usdFee).div(tokenPrice).round(cosmosToken.decimals, Big.roundDown).toFixed(4);
-          return {
-            id: i,
-            label: getFeeLabel(speedLabels[i]),
-            denom: cosmosToken.symbol,
-            amount: tokenFee,
-            amountInCurrency: usdFee.toString()
-          };
-        });
-      }
-    } catch (error) {
-      // eslint-disable-next-line
-      console.error('Error fetching fees:', error);
-      throw error;
-    }
+async function getFees (fromChain: SupportedChain, token: IToken, manualTokenPrice?: number): Promise<BridgeFee[]> {
+  if (fromChain !== SupportedChain.GravityBridge) {
+    return [];
   }
 
-  return [];
+  try {
+    const slowLimit = 50000;
+    const fourHrLimit = 400000;
+    const instantLimit = 750000;
+    const gasPrices = await getGasPrices();
+    logger.info('[getFees] gasPrices:', gasPrices);
+    const feeLevels = [gasPrices.slow, gasPrices.fast, gasPrices.instant];
+    const speedLabels: ('slow' | 'fast' | 'instant')[] = ['slow', 'fast', 'instant'];
+    const gasLimits = [slowLimit, fourHrLimit, instantLimit];
+
+    // Use manual price if provided, otherwise fetch from API
+    let tokenPrice: number;
+    if (manualTokenPrice !== undefined && manualTokenPrice > 0) {
+      tokenPrice = manualTokenPrice;
+      logger.info('[getFees] Using manual token price:', tokenPrice);
+    } else {
+      const tokenPriceData = await fetchTokenPriceData(token);
+      if (tokenPriceData === null) {
+        // Return empty fees when no price available and no manual price provided
+        logger.info('[getFees] No token price data available, returning empty fees');
+        return [];
+      }
+      tokenPrice = tokenPriceData.price;
+      logger.info('[getFees] Using API token price:', tokenPrice);
+    }
+
+    const wethPriceData = await getWETHPrice();
+    const ethPrice = wethPriceData.price;
+
+    logger.info('[getFees] tokenPrice:', tokenPrice, 'ethPrice:', ethPrice);
+
+    // Get token decimals and symbol from either erc20 or cosmos token
+    const decimals = token.erc20?.decimals ?? token.cosmos?.decimals ?? 6;
+    const symbol = token.erc20?.symbol ?? token.cosmos?.symbol ?? 'TOKEN';
+
+    return feeLevels.map((gasPrice, i) => {
+      const gasLimit = gasLimits[i];
+      const usdFee = parseFloat((gasPrice * gasLimit / 1e9 * ethPrice).toFixed(4));
+      logger.info('[getFees] gasPrice:', gasPrice, 'gasLimit:', gasLimit, 'ethPrice:', ethPrice, 'usdFee:', usdFee);
+
+      if (isNaN(usdFee) || isNaN(tokenPrice)) {
+        throw new Error(`Invalid usdFee (${usdFee}) or tokenPrice (${tokenPrice}). gasPrice=${gasPrice}, ethPrice=${ethPrice}`);
+      }
+
+      const tokenFee = Big(usdFee).div(tokenPrice).round(decimals, Big.roundDown).toFixed(4);
+      return {
+        id: i,
+        label: getFeeLabel(speedLabels[i]),
+        denom: symbol,
+        amount: tokenFee,
+        amountInCurrency: usdFee.toString()
+      };
+    });
+  } catch (error) {
+    // eslint-disable-next-line
+    console.error('Error fetching fees:', error);
+    throw error;
+  }
 }
 
 function getFeeLabel (speed: 'slow' | 'fast' | 'instant'): string {
