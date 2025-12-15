@@ -23,6 +23,7 @@ import { ReactComponent as LightThemeIcon } from 'images/light-theme-icon.svg';
 import _ from 'lodash';
 import React, { useCallback, useEffect, useState } from 'react';
 import transferer from 'services/transfer/transferer';
+import feeCalculator from 'services/util/fee-calculator';
 import loggerFactory from 'services/util/logger-factory';
 import toastService from 'services/util/toast-service';
 import themeStore from 'stores/theme-store';
@@ -58,11 +59,10 @@ const TransferBox: React.FC<TransferBoxProps> = ({ theme }) => {
   const hasAmount: boolean = Big(amount || '0').gt('0');
   const tokenSelected: boolean = selectedToken !== undefined;
   const hasTokenBalance: boolean = Big(tokenBalance || '0').round(ROUND, Big.roundDown).gt('0');
-  const chainFeeRate = 0.0002;
-  const chainFee = Big(amount || '0').times(chainFeeRate);
+  const chainFee = feeCalculator.calculateChainFee(amount || '0');
 
   const isEnough: boolean = needBridgeFee
-    ? Big(tokenBalance || '0').gte(Big(amount || '0').add(bridgeFee?.amount || '0').add(chainFee))
+    ? !feeCalculator.hasInsufficientBalance(tokenBalance || '0', amount || '0', bridgeFee?.amount || '0')
     : Big(tokenBalance || '0').gte(Big(amount || '0').add(chainFee));
   const selectedTokenIcon: string = selectedToken !== undefined
     ? selectedToken.erc20?.logoURI || selectedToken.cosmos?.logoURI || defaultTokenIcon
@@ -99,8 +99,7 @@ const TransferBox: React.FC<TransferBoxProps> = ({ theme }) => {
   const onClickMax = useCallback(() => {
     const _tokenBalance = Big(tokenBalance).round(ROUND, Big.roundDown);
     if (needBridgeFee && bridgeFee) {
-      const chainFee = _tokenBalance.times(0.0002).round(ROUND, Big.roundDown);
-      const _amount = _tokenBalance.sub(chainFee).sub(bridgeFee.amount).round(ROUND, Big.roundDown);
+      const _amount = feeCalculator.calculateMaxBridgeAmount(_tokenBalance.toString(), bridgeFee.amount, ROUND);
       _amount.gte(0)
         ? setAmount(_amount.toString())
         : setAmount('0');
