@@ -2,9 +2,9 @@ import { AminoSignResponse, BroadcastMode, StdSignDoc } from '@cosmjs/launchpad'
 import { DirectSignResponse } from '@cosmjs/proto-signing';
 import { Keplr, Window } from '@keplr-wallet/types';
 import { cosmos } from 'constants/proto';
+import Long from 'long';
 import keplrChainInfo from 'constants/keplr-chain-info';
 import _ from 'lodash';
-import Long from 'long';
 import loggerFactory from 'services/util/logger-factory';
 import {
   AccountChangeEventHandler,
@@ -77,7 +77,7 @@ async function signDirect (chainInfo: CosmosChainInfo, signer: string, signDoc: 
     chainId,
     bodyBytes: signDoc.body_bytes,
     authInfoBytes: signDoc.auth_info_bytes,
-    accountNumber: signDoc.account_number as Long
+    accountNumber: Long.fromString(String(signDoc.account_number))
   };
   const options = chainInfo && chainInfo.supportZeroFee
     ? { preferNoSetFee: true }
@@ -104,15 +104,18 @@ async function sendTx (chainId: string, txBytes: Uint8Array, mode: cosmos.tx.v1b
 function registerAccountChangeHandler (handler: AccountChangeEventHandler): void {
   unregisterAccountChangeHandler();
   accountChangeEventHandler = handler;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).addEventListener(KeplrEvent.AccountChange, handler);
 }
 
-function registerNetworkChangeHandler (handler: AccountChangeEventHandler): void {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function registerNetworkChangeHandler (_handler: AccountChangeEventHandler): void {
   logger.info('[registerNetworkChangeHandler] Keplr does not support network change event. Do nothing...');
 }
 
 function unregisterAccountChangeHandler (): void {
   if (accountChangeEventHandler) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).removeEventListener(KeplrEvent.AccountChange, accountChangeEventHandler);
   }
 }
@@ -136,7 +139,8 @@ async function isSupportDirectSign (chainInfo: CosmosChainInfo): Promise<boolean
   return key.isNanoLedger === false;
 }
 
-async function isSupportAminoSign (chainInfo: CosmosChainInfo): Promise<boolean> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function isSupportAminoSign (_chainInfo: CosmosChainInfo): Promise<boolean> {
   return Promise.resolve(true);
 }
 

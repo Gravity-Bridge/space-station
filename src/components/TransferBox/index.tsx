@@ -21,7 +21,7 @@ import { ReactComponent as DarkThemeIcon } from 'images/dark-theme-icon.svg';
 import defaultTokenIcon from 'images/default-token-icon.png';
 import { ReactComponent as LightThemeIcon } from 'images/light-theme-icon.svg';
 import _ from 'lodash';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import transferer from 'services/transfer/transferer';
 import feeCalculator from 'services/util/fee-calculator';
 import loggerFactory from 'services/util/logger-factory';

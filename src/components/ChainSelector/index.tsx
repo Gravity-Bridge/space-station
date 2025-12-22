@@ -518,7 +518,7 @@ async function connectChain (chain: SupportedChain, walletType: EthWalletType | 
     try {
       await cosmosWalletManager.connect(chain, walletType);
     } catch (error) {
-      toastService.showFailToast("Can't connect to Ledger", (error as any).message);
+      toastService.showFailToast("Can't connect to Ledger", (error as Error).message);
     }
   }
 }

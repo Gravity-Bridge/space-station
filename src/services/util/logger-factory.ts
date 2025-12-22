@@ -22,28 +22,28 @@ class Logger {
     this.moduleName = moduleName;
   }
 
-  debug (...message: any): void {
+  debug (...message: unknown[]): void {
     if (this.canLog(Level.Debug)) {
       // eslint-disable-next-line no-console
       console.debug(`${this.moduleName}`, ...message);
     }
   }
 
-  info (...message: any): void {
+  info (...message: unknown[]): void {
     if (this.canLog(Level.Info)) {
       // eslint-disable-next-line no-console
       console.info(`${this.moduleName}`, ...message);
     }
   }
 
-  warn (...message: any): void {
+  warn (...message: unknown[]): void {
     if (this.canLog(Level.Warn)) {
       // eslint-disable-next-line no-console
       console.warn(`${this.moduleName}`, ...message);
     }
   }
 
-  error (...message: any): void {
+  error (...message: unknown[]): void {
     if (this.canLog(Level.Error)) {
       // eslint-disable-next-line no-console
       console.error(`${this.moduleName}`, ...message);

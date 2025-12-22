@@ -114,14 +114,16 @@ class CosmostationWallet implements IEthWallet {
     if (this.accountChangeEventHandler) {
       this.unregisterAccountChangeHandler();
     }
-    this.accountChangeEventHandler = await onAccountChange(handler);
+    await onAccountChange(handler);
+    this.accountChangeEventHandler = handler;
   }
 
   async registerNetworkChangeHandler (handler: NetworkChangeEventHandler): Promise<void> {
     if (this.networkChangeEventHandler) {
       this.unregisterNetworkChangeHandler();
     }
-    this.networkChangeEventHandler = await onNetworkChange(handler);
+    await onNetworkChange(handler);
+    this.networkChangeEventHandler = handler;
   }
 
   unregisterAccountChangeHandler (): void {
@@ -147,8 +149,8 @@ class CosmostationWallet implements IEthWallet {
 
 async function getCosmostationProvider (): Promise<CosmostationProvider> {
   try {
-    const provider: any = await ethereum();
-    return provider;
+    const provider: unknown = await ethereum();
+    return provider as CosmostationProvider;
   } catch {
     throw new NoCosmostationWalletError();
   }
@@ -156,7 +158,7 @@ async function getCosmostationProvider (): Promise<CosmostationProvider> {
 
 async function getChainId (): Promise<string> {
   const provider: CosmostationProvider = await getCosmostationProvider();
-  return provider.request({ method: 'eth_chainId' });
+  return provider.request({ method: 'eth_chainId' }) as unknown as string;
 }
 
 async function hasPermission (): Promise<boolean> {
@@ -192,14 +194,14 @@ async function getAccountInfo (): Promise<string> {
   }
 }
 
-async function onAccountChange (handler: AccountChangeEventHandler): Promise<any> {
+async function onAccountChange (handler: AccountChangeEventHandler): Promise<void> {
   const cosmostationProvider = await getCosmostationProvider();
-  return cosmostationProvider.on(CosmostationEventType.accountsChanged, handler);
+  cosmostationProvider.on(CosmostationEventType.accountsChanged, handler);
 }
 
-async function onNetworkChange (handler: NetworkChangeEventHandler): Promise<any> {
+async function onNetworkChange (handler: NetworkChangeEventHandler): Promise<void> {
   const cosmostationProvider = await getCosmostationProvider();
-  return cosmostationProvider.on(CosmostationEventType.chainChanged, handler);
+  cosmostationProvider.on(CosmostationEventType.chainChanged, handler);
 }
 
 async function removeAccountChangeHandler (handler: AccountChangeEventHandler): Promise<void> {
@@ -214,7 +216,7 @@ async function removeNetworkChangeHandler (handler: NetworkChangeEventHandler): 
   cosmostationProvider.off(handler);
 }
 
-function isPendingError (error: any): boolean {
+function isPendingError (error: unknown): boolean {
   const code = _.get(error, 'code');
   if (code === -32002) {
     return true;

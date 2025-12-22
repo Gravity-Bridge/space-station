@@ -148,7 +148,7 @@ function isMetaMaskProvider (provider: unknown): provider is MetaMaskProvider {
 }
 
 async function getMetaMaskProvider (): Promise<MetaMaskProvider> {
-  const provider: any = await detectEthereumProvider();
+  const provider: unknown = await detectEthereumProvider();
   if (!isMetaMaskProvider(provider)) {
     throw new NoMetaMaskWalletError();
   }
@@ -157,7 +157,7 @@ async function getMetaMaskProvider (): Promise<MetaMaskProvider> {
 
 async function getChainId (): Promise<string> {
   const provider: MetaMaskProvider = await getMetaMaskProvider();
-  return provider.request({ method: 'eth_chainId' });
+  return provider.request({ method: 'eth_chainId' }) as unknown as string;
 }
 
 async function hasPermission (): Promise<boolean> {
@@ -188,13 +188,6 @@ async function getAccountInfo (): Promise<string> {
     : '';
 }
 
-async function getEthBalance (address: string): Promise<number> {
-  const provider = await getMetaMaskProvider();
-  const params = [address, 'latest'];
-  const balance = await provider.request({ method: 'eth_getBalance', params });
-  return _.toNumber(balance);
-}
-
 async function onAccountChange (handler: AccountChangeEventHandler): Promise<void> {
   const metaMaskProvider = await getMetaMaskProvider();
   metaMaskProvider.on(MetaMaskEventType.accountsChanged, handler);
@@ -217,7 +210,7 @@ async function removeNetworkChangeHandler (handler: NetworkChangeEventHandler): 
   metaMaskProvider.removeListener(MetaMaskEventType.chainChanged, handler);
 }
 
-function isPendingError (error: any): boolean {
+function isPendingError (error: unknown): boolean {
   const code = _.get(error, 'code');
   if (code === -32002) {
     return true;

@@ -1,8 +1,8 @@
-import { AminoSignResponse, BroadcastMode, StdSignDoc } from '@cosmjs/launchpad';
+import { AminoSignResponse, StdSignDoc } from '@cosmjs/launchpad';
 import { DirectSignResponse } from '@cosmjs/proto-signing';
 import { cosmos } from 'constants/proto';
-import _ from 'lodash';
 import Long from 'long';
+import _ from 'lodash';
 import loggerFactory from 'services/util/logger-factory';
 import { Cosmos, cosmos as cosmosProvider } from '@cosmostation/extension-client';
 import {
@@ -103,7 +103,7 @@ async function signDirect (chainInfo: CosmosChainInfo, signer: string, signDoc: 
       signature: result.signature
     },
     signed: {
-      accountNumber: new Long(Number(result.signed_doc.account_number)),
+      accountNumber: Long.fromString(result.signed_doc.account_number),
       authInfoBytes: result.signed_doc.auth_info_bytes,
       bodyBytes: result.signed_doc.body_bytes,
       chainId: result.signed_doc.chain_id
@@ -145,17 +145,18 @@ async function sendTx (chainId: string, txBytes: Uint8Array, mode: cosmos.tx.v1b
 
   const result = await cosmostation.sendTransaction(chainInfo.chainName, txBytes, mode);
 
-  return Buffer.from(result.tx_response.txhash, 'hex');
+  return new Uint8Array(Buffer.from(result.tx_response.txhash, 'hex'));
 }
 
 async function registerAccountChangeHandler (handler: AccountChangeEventHandler): Promise<void> {
-  const cosmostation = await detectCosmostationProvider();
   unregisterAccountChangeHandler();
 
-  accountChangeEventHandler = cosmostation.onAccountChanged(handler as any) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  accountChangeEventHandler = (handler as any);
 }
 
-function registerNetworkChangeHandler (handler: AccountChangeEventHandler): void {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function registerNetworkChangeHandler (_handler: AccountChangeEventHandler): void {
   logger.info('[registerNetworkChangeHandler] Cosmostation does not support network change event. Do nothing...');
 }
 
@@ -170,26 +171,21 @@ function unregisterNetworkChangeHandler (): void {
   logger.info('[unregisterNetworkChangeHandler] Cosmostation does not support network change event. Do nothing...');
 }
 
-function convertBroadcastMode (mode: cosmos.tx.v1beta1.BroadcastMode): BroadcastMode {
-  switch (mode) {
-    case cosmos.tx.v1beta1.BroadcastMode.BROADCAST_MODE_BLOCK: return BroadcastMode.Block;
-    case cosmos.tx.v1beta1.BroadcastMode.BROADCAST_MODE_ASYNC: return BroadcastMode.Async;
-    case cosmos.tx.v1beta1.BroadcastMode.BROADCAST_MODE_SYNC: return BroadcastMode.Sync;
-    default: return BroadcastMode.Sync;
-  }
-}
-
-async function isSupportDirectSign (chainInfo: CosmosChainInfo): Promise<boolean> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function isSupportDirectSign (_chainInfo: CosmosChainInfo): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return true;
 }
 
-async function isSupportAminoSign (chainInfo: CosmosChainInfo): Promise<boolean> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function isSupportAminoSign (_chainInfo: CosmosChainInfo): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return Promise.resolve(true);
 }
 
-async function isSupportBroadcast (chainInfo: CosmosChainInfo): Promise<boolean> {
+async function isSupportBroadcast (_chainInfo: CosmosChainInfo): Promise<boolean> {
   try {
-    const account = await getAccount(chainInfo);
+    const account = await getAccount(_chainInfo);
     return !_.isEmpty(account);
   } catch (error) {
     return false;

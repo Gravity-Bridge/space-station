@@ -20,6 +20,7 @@ import CosmosApp from 'ledger-cosmos-js';
 
 const logger = loggerFactory.getLogger('[LedgerCosmosWallet]');
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function connect (chainInfo: CosmosChainInfo): Promise<void> {
   const transport = await ledgerConnector.getLedgerConnection();
   const app = new CosmosApp(transport);
@@ -47,6 +48,7 @@ async function addChain (chainId: string): Promise<void> {
   logger.info('[addChain] Ledger does not support to add chain. Do nothing...');
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function signDirect (chainInfo: CosmosChainInfo, signer: string, signDoc: cosmos.tx.v1beta1.SignDoc): Promise<DirectSignResponse> {
   logger.info('[signDirect] Direct signing...');
   throw new Error('Not supported!');
@@ -87,16 +89,19 @@ async function signAmino (chainInfo: CosmosChainInfo, signer: string, signDoc: S
   return result;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function sendTx (chainId: string, txBytes: Uint8Array, mode: cosmos.tx.v1beta1.BroadcastMode): Promise<Uint8Array> {
   logger.info('[sendTx] Sending TX...');
   logger.error('[sendTx] Ledger does not support sending TX!');
   return new Uint8Array();
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function registerAccountChangeHandler (handler: AccountChangeEventHandler): void {
   logger.info('[registerAccountChangeHandler] Ledger does not support account change event. Do nothing...');
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function registerNetworkChangeHandler (handler: NetworkChangeEventHandler): void {
   logger.info('[registerNetworkChangeHandler] Ledger does not support network change event. Do nothing...');
 }
@@ -129,14 +134,17 @@ async function checkApp (app: CosmosApp): Promise<void> {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function isSupportDirectSign (chainInfo: CosmosChainInfo): Promise<boolean> {
   return Promise.resolve(false);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function isSupportAminoSign (chainInfo: CosmosChainInfo): Promise<boolean> {
   return Promise.resolve(true);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function isSupportBroadcast (chainInfo: CosmosChainInfo): Promise<boolean> {
   return Promise.resolve(false);
 }

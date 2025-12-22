@@ -4,7 +4,6 @@ import loggerFactory from 'services/util/logger-factory';
 import { CHAIN_FEE_RATE } from 'services/util/fee-calculator';
 import { IToken, ITransfer } from 'types';
 import { AminoMsg } from '@cosmjs/amino';
-import Long from 'long';
 
 const logger = loggerFactory.getLogger('[GravityBridgeMessageService]');
 

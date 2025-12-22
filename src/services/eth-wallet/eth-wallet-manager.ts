@@ -58,7 +58,7 @@ async function init (ethChain: SupportedEthChain): Promise<void> {
 
   for (const _walletType in duplicated) {
     const chains = duplicated[_walletType];
-    const walletType = (<any>EthWalletType)[_walletType];
+    const walletType = (EthWalletType as Record<string, EthWalletType>)[_walletType];
     if (_.includes(chains, ethChain)) {
       try {
         await connect(ethChain, walletType);
@@ -136,7 +136,8 @@ function getAccountChangeEventHandler (chain: SupportedEthChain, wallet: IEthWal
 
 function getNetworkChangeEventHandler (chain: SupportedEthChain, wallet: IEthWallet): NetworkChangeEventHandler {
   const chainInfo = ethChains[chain];
-  return async (chainId: string): Promise<void> => {
+  return async (data: unknown): Promise<void> => {
+    const chainId = data as string;
     logger.info('[networkChangeEventHandler] Chain:', chain);
     logger.info('[networkChangeEventHandler] Updated chain ID:', chainId);
     if (chainId !== chainInfo.chainId) {

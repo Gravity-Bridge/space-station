@@ -9,16 +9,15 @@ import {
 } from 'types';
 import { AminoMsg, AminoSignResponse } from '@cosmjs/amino';
 import { cosmos, google } from 'constants/proto';
-
 import { DirectSignResponse } from '@cosmjs/proto-signing';
 import Long from 'long';
 import _ from 'lodash';
+import dotenv from 'dotenv';
 import accountStore from 'stores/account-store';
 import chainInfoMap from 'constants/keplr-chain-info';
 import cosmosChains from 'constants/cosmos-chains';
 import cosmosTxService from 'services/cosmos-tx/cosmos-tx-service';
 import cosmostationWallet from 'services/cosmos-wallet/cosmostation-wallet';
-import dotenv from 'dotenv';
 import keplrWallet from 'services/cosmos-wallet/keplr-wallet';
 import lcdService from 'services/cosmos-tx/cosmos-sdk-lcd-service';
 import ledgerCosmosWallet from 'services/cosmos-wallet/ledger-cosmos-wallet';
@@ -166,10 +165,10 @@ async function signDirect (
   const mode = cosmos.tx.signing.v1beta1.SignMode.SIGN_MODE_DIRECT;
   const authInfo = cosmosTxService.getAuthInfo(
     account.pubKey,
-    sequence,
+    Long.fromValue(sequence),
     baseDenom,
     feeAmount,
-    new Long(gasLimit),
+    Long.fromValue(gasLimit),
     mode,
     chain
   );
@@ -179,7 +178,7 @@ async function signDirect (
     chainId,
     txBody,
     authInfo,
-    new Long(_.toNumber(accountNumber))
+    accountNumber
   );
   logger.info('[signDirect] Sign Doc:', signDoc);
 
@@ -213,7 +212,7 @@ async function signAmino (
   const [accountNumber, sequence] = await getAccountInfo(chain, account.address);
   const aminoSignDoc = cosmosTxService.getAminoSignDoc(
     chainId,
-    accountNumber,
+    String(accountNumber),
     String(sequence),
     chainInfo.denom,
     feeAmount,
@@ -303,7 +302,7 @@ async function getBalance (chain: SupportedCosmosChain, address: string): Promis
   }
 }
 
-async function getAccountInfo (chain: SupportedCosmosChain, address: string): Promise<[string, Long]> {
+async function getAccountInfo (chain: SupportedCosmosChain, address: string): Promise<[Long, Long]> {
   try {
     logger.info(`[getAccountInfo] Getting balance of ${address}...`);
     const accountInfo = await lcdService.getAccountInfo(chain, address);
@@ -315,10 +314,10 @@ async function getAccountInfo (chain: SupportedCosmosChain, address: string): Pr
     _.get(accountInfo, 'base_account.sequence') ||
     _.get(accountInfo, 'sequence');
 
-    return [accountNumber, sequence];
+    return [Long.fromValue(accountNumber), Long.fromValue(sequence)];
   } catch (error) {
     logger.error('[getAccountInfo]', error);
-    return ['', new Long(0)];
+    return [Long.fromValue(0), Long.fromValue(0)];
   }
 }
 
@@ -355,7 +354,8 @@ function getAccountChangeEventHandler (chain: SupportedCosmosChain, wallet: ICos
 
 function getNetworkChangeEventHandler (chain: SupportedCosmosChain, wallet: ICosmosWallet): NetworkChangeEventHandler {
   const chainInfo = cosmosChains[chain];
-  return async (chainId: string): Promise<void> => {
+  return async (data: unknown): Promise<void> => {
+    const chainId = data as string;
     logger.info('[networkChangeEventHandler] Chain:', chain);
     logger.info('[networkChangeEventHandler] Updated chain ID:', chainId);
     if (chainId !== chainInfo.chainId) {

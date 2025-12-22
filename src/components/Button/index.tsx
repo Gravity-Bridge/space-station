@@ -6,7 +6,7 @@ import React from 'react';
 type BoxProps = {
   className?: string;
   children?: JSX.Element | JSX.Element[] | string;
-  onClick?: (event: any) => void;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   type?: 'primary';
 }

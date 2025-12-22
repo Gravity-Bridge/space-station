@@ -15,6 +15,15 @@ export default {
     logoURI: 'https://assets.coingecko.com/coins/images/9956/thumb/4943.png?1636636734',
     priceDenom: 'dai'
   },
+  gravity0xdC035D45d973E3EC169d2276DDab16f1e407384F: {
+    name: 'USDS',
+    denom: 'gravity0xdC035D45d973E3EC169d2276DDab16f1e407384F',
+    symbol: 'USDS',
+    coinId: 'usds',
+    decimals: 18,
+    logoURI: 'https://assets.coingecko.com/coins/images/39926/thumb/usds.webp?1726666683',
+    priceDenom: 'usds'
+  },
   gravity0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2: {
     name: 'Wrapped ETH',
     denom: 'gravity0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',

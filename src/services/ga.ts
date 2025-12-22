@@ -1,6 +1,6 @@
 import GA from 'react-ga4';
 
-type TrackPayload = { [key: string]: any };
+type TrackPayload = { [key: string]: unknown };
 
 export const initGA = (): void => {
   if (process.env.REACT_APP_GA) {

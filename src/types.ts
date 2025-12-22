@@ -102,7 +102,7 @@ export enum EthWalletEvent {
 }
 
 export type AccountChangeEventHandler = (accounts: string[]) => void;
-export type NetworkChangeEventHandler = (data: any) => void;
+export type NetworkChangeEventHandler = (data: unknown) => void;
 
 export interface IEthWalletManager {
   init (ethChain: SupportedEthChain): Promise<void>;
@@ -131,12 +131,12 @@ export interface IEthWallet {
 
 export interface MetaMaskProvider extends AbstractProvider, EventEmitter {
   isMetaMask?: boolean;
-  request (args: RequestArguments): Promise<any>;
+  request (args: RequestArguments): Promise<unknown>;
 }
 
-export interface CosmostationProvider extends AbstractProvider, EventEmitter {
-  request (args: RequestArguments): Promise<any>;
-  off (handler: unknown): any;
+export interface CosmostationProvider extends AbstractProvider, Omit<EventEmitter, 'off'> {
+  request (args: RequestArguments): Promise<unknown>;
+  off (handler: unknown): void;
 }
 
 export type EthChainInfo = {
