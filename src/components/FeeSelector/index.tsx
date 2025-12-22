@@ -42,6 +42,7 @@ const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedT
   const [fees, setFees] = useState<BridgeFee[]>([]);
   const [priceLoading, setPriceLoading] = useState<boolean>(true);
   const [feesLoading, setFeesLoading] = useState<boolean>(true);
+  const [feeError, setFeeError] = useState<string | null>(null);
 
   // Fetch token price on token change
   useEffect(() => {
@@ -50,6 +51,7 @@ const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedT
       setNeedsManualPrice(false);
       setManualPrice('');
       setFees([]);
+      setFeeError(null);
 
       try {
         const tokenPriceData = await fetchTokenPriceData(selectedToken);
@@ -85,11 +87,13 @@ const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedT
       if (!priceToUse || parseFloat(priceToUse) <= 0) {
         setFees([]);
         setFeesLoading(false);
+        setFeeError(null);
         return;
       }
 
       try {
         setFeesLoading(true);
+        setFeeError(null);
         const fetchedFees = await transferer.getFees(fromChain, toChain, selectedToken, priceToUse);
         setFees(fetchedFees);
         setFeesLoading(false);
@@ -97,6 +101,13 @@ const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedT
         logger.error('Error fetching fees:', error);
         setFees([]);
         setFeesLoading(false);
+        // Check if the error is related to wallet connection
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('wallet') || errorMessage.includes('gas price')) {
+          setFeeError('Connect Ethereum wallet to calculate fees');
+        } else {
+          setFeeError('Error calculating fees');
+        }
       }
     };
 
@@ -187,32 +198,38 @@ const FeeSelector: React.FC<FeeSelectorProps> = ({ fromChain, toChain, selectedT
                   Enter token price above to calculate fees
                 </Text>
                 )
-              : fees.length === 0
+              : feeError
                 ? (
                   <Text size="tiny" muted className="fee-selector-message">
-                    Connect Ethereum wallet to calculate fees
+                    {feeError}
                   </Text>
                   )
-                : (
-                    fees.map((fee, i) => (
-                  <button
-                    key={fee.id}
-                    className={classNames('fee-selector-fee-button', { selected: fee.id === selectedFee?.id })}
-                    onClick={onClickFee.bind(null, fee)}
-                    disabled={disableds[i]}
-                  >
-                    <Text size="tiny" className="fee-button-text" muted={disableds[i]}>
-                      {fee.label}
+                : fees.length === 0
+                  ? (
+                    <Text size="tiny" muted className="fee-selector-message">
+                      Connect Ethereum wallet to calculate fees
                     </Text>
-                    <Text size="tiny" className="fee-button-text" muted={disableds[i]}>
-                      {fee.amount} {_.upperCase(fee.denom)}
-                    </Text>
-                    <Text size="tiny" className="fee-button-text" muted>
-                      ${fee.amountInCurrency}
-                    </Text>
-                  </button>
-                    ))
-                  )}
+                    )
+                  : (
+                      fees.map((fee, i) => (
+                        <button
+                          key={fee.id}
+                          className={classNames('fee-selector-fee-button', { selected: fee.id === selectedFee?.id })}
+                          onClick={onClickFee.bind(null, fee)}
+                          disabled={disableds[i]}
+                        >
+                          <Text size="tiny" className="fee-button-text" muted={disableds[i]}>
+                            {fee.label}
+                          </Text>
+                          <Text size="tiny" className="fee-button-text" muted={disableds[i]}>
+                            {fee.amount} {_.upperCase(fee.denom)}
+                          </Text>
+                          <Text size="tiny" className="fee-button-text" muted>
+                            ${fee.amountInCurrency}
+                          </Text>
+                        </button>
+                      ))
+                    )}
         </div>
       </Row>
     </Box>
