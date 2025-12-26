@@ -3,8 +3,18 @@ import ChihuahuaChainLogo from 'images/chihuahua-chain-logo.png';
 import NymLogo from 'images/nym-icon.png';
 import EvmosLogo from 'images/evmos-logo.png';
 import UnificationLogo from 'images/unification-logo.png';
+import GravitonLogo from 'images/gb-chain-logo.png';
 
 export default [
+  {
+    chainId: '0x1',
+    address: '0x9f2ef66a09A5d2dAB13D84A7638668EA36679e03',
+    name: 'Graviton',
+    symbol: 'GRAV',
+    decimals: 6,
+    logoURI: GravitonLogo,
+    priceDenom: 'ugraviton'
+  },
   {
     chainId: '0x1',
     address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
